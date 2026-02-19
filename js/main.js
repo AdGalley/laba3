@@ -1,11 +1,5 @@
-// ============================================
-// Глобальная шина событий (пункт 12 пособия)
-// ============================================
 let eventBus = new Vue();
 
-// ============================================
-// Компонент create-task-form
-// ============================================
 Vue.component('create-task-form', {
   data() {
     return {
@@ -57,7 +51,7 @@ Vue.component('create-task-form', {
           title: this.title,
           description: this.description,
           deadline: this.deadline,
-          createdAt: this.getCurrentDateTime()
+          createdAt: new Date().toISOString()
         };
         
         eventBus.$emit('task-created', newTask);
@@ -70,17 +64,10 @@ Vue.component('create-task-form', {
         if (!this.description) this.errors.push("Описание обязательно.");
         if (!this.deadline) this.errors.push("Дедлайн обязателен.");
       }
-    },
-    getCurrentDateTime() {
-      const now = new Date();
-      return now.toLocaleString('ru-RU');
     }
   }
 });
 
-// ============================================
-// Компонент task-card
-// ============================================
 Vue.component('task-card', {
   props: {
     task: {
@@ -107,16 +94,16 @@ Vue.component('task-card', {
       <div v-if="!isEditing && !showReturnForm">
         <h3>{{ task.title }}</h3>
         <p class="description">{{ task.description }}</p>
-        <p class="date">Создано: {{ task.createdAt }}</p>
+        <p class="date">Создано: {{ formatDate(task.createdAt) }}</p>
         <p class="deadline">Дедлайн: {{ task.deadline }}</p>
         <p v-if="task.completedAt" class="completed-info">
-          Выполнено: {{ task.completedAt }}
+          Выполнено: {{ formatDate(task.completedAt) }}
           <span :class="deadlineStatusClass()">
             ({{ getDeadlineStatus() }})
           </span>
         </p>
         <p v-if="task.updatedAt" class="updated">
-          Изменено: {{ task.updatedAt }}
+          Изменено: {{ formatDate(task.updatedAt) }}
         </p>
         <p v-if="task.returnReason" class="return-info">
           Возврат: {{ task.returnReason }}
@@ -159,6 +146,18 @@ Vue.component('task-card', {
     }
   },
   methods: {
+    formatDate(isoString) {
+      if (!isoString) return '';
+      const date = new Date(isoString);
+      return date.toLocaleString('ru-RU', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    },
     getStatusClass() {
       if (this.columnIndex === 3) {
         return this.isOverdue ? 'overdue' : 'on-time';
@@ -182,7 +181,7 @@ Vue.component('task-card', {
         title: this.editTitle,
         description: this.editDescription,
         deadline: this.editDeadline,
-        updatedAt: this.getCurrentDateTime()
+        updatedAt: new Date().toISOString()
       });
       this.isEditing = false;
     },
@@ -209,16 +208,10 @@ Vue.component('task-card', {
       if (confirm('Удалить эту задачу?')) {
         eventBus.$emit('delete-task', this.task.id);
       }
-    },
-    getCurrentDateTime() {
-      return new Date().toLocaleString('ru-RU');
     }
   }
 });
 
-// ============================================
-// Компонент board-column
-// ============================================
 Vue.component('board-column', {
   props: {
     title: {
@@ -250,9 +243,6 @@ Vue.component('board-column', {
   `
 });
 
-// ============================================
-// Корневой экземпляр Vue
-// ============================================
 let app = new Vue({
   el: '#app',
   data: {
@@ -268,7 +258,7 @@ let app = new Vue({
     handleTaskCreated(newTask) {
       newTask.id = this.nextTaskId++;
       this.columns[0].push(newTask);
-      this.saveToLocalStorage(); // ✅ Сохраняем после создания
+      this.saveToLocalStorage();
     },
     handleMoveTask(taskId, fromColumn) {
       const taskIndex = this.columns[fromColumn].findIndex(t => t.id === taskId);
@@ -278,18 +268,18 @@ let app = new Vue({
       this.columns[fromColumn].splice(taskIndex, 1);
       
       if (fromColumn === 2) {
-        task.completedAt = new Date().toLocaleString('ru-RU');
+        task.completedAt = new Date().toISOString();
       }
       
       this.columns[fromColumn + 1].push(task);
-      this.saveToLocalStorage(); // ✅ Сохраняем после перемещения
+      this.saveToLocalStorage();
     },
     handleUpdateTask(taskId, updates) {
       for (let i = 0; i < this.columns.length; i++) {
         const task = this.columns[i].find(t => t.id === taskId);
         if (task) {
           Object.assign(task, updates);
-          this.saveToLocalStorage(); // ✅ Сохраняем после редактирования
+          this.saveToLocalStorage();
           break;
         }
       }
@@ -300,31 +290,32 @@ let app = new Vue({
       
       const task = this.columns[2][taskIndex];
       task.returnReason = reason;
-      task.returnedAt = new Date().toLocaleString('ru-RU');
+      task.returnedAt = new Date().toISOString();
       
       this.columns[2].splice(taskIndex, 1);
       this.columns[1].push(task);
-      this.saveToLocalStorage(); // ✅ Сохраняем после возврата
+      this.saveToLocalStorage();
     },
     handleDeleteTask(taskId) {
       const taskIndex = this.columns[0].findIndex(t => t.id === taskId);
       if (taskIndex !== -1) {
         this.columns[0].splice(taskIndex, 1);
-        this.saveToLocalStorage(); // ✅ Сохраняем после удаления
+        this.saveToLocalStorage();
+      }
+    },
+   
+    clearCompletedTasks() {
+      if (confirm('Очистить все выполненные задачи? Это действие нельзя отменить!')) {
+        this.columns[3] = [];
+        this.saveToLocalStorage();
       }
     },
     
-    // ============================================
-    // Метод сохранения в localStorage
-    // ============================================
     saveToLocalStorage() {
       localStorage.setItem('kanban_columns', JSON.stringify(this.columns));
       localStorage.setItem('kanban_nextTaskId', this.nextTaskId);
     },
     
-    // ============================================
-    // Метод загрузки из localStorage
-    // ============================================
     loadFromLocalStorage() {
       const savedColumns = localStorage.getItem('kanban_columns');
       const savedNextTaskId = localStorage.getItem('kanban_nextTaskId');
@@ -338,12 +329,10 @@ let app = new Vue({
       }
     }
   },
-  // Хук жизненного цикла mounted (пункт 12 пособия)
+  
   mounted() {
-    // ✅ Загружаем данные при монтировании компонента
     this.loadFromLocalStorage();
     
-    // Подписка на события eventBus (пункт 12 пособия)
     eventBus.$on('task-created', (newTask) => {
       this.handleTaskCreated(newTask);
     });

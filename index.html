@@ -36,6 +36,12 @@
         :column-index="3">
       </board-column>
     </div>
+    <button 
+      v-on:click="clearCompletedTasks" 
+      class="btn-clear-completed"
+      :disabled="columns[3].length === 0">
+      Очистить выполненные задачи
+    </button>
   </div>
 </body>
 </html>
