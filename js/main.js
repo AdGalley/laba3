@@ -1,3 +1,86 @@
+// ============================================
+// Глобальная шина событий (пункт 12 пособия)
+// ============================================
+let eventBus = new Vue();
+
+// ============================================
+// Компонент create-task-form
+// ============================================
+Vue.component('create-task-form', {
+  data() {
+    return {
+      title: '',
+      description: '',
+      deadline: ''
+    }
+  },
+  template: `
+    <form class="create-form" @submit.prevent="createTask">
+      <h3>Новая задача</h3>
+      <p>
+        <label for="title">Заголовок:</label>
+        <input id="title" v-model="title" placeholder="Заголовок" class="input-field">
+      </p>
+      <p>
+        <label for="description">Описание:</label>
+        <textarea id="description" v-model="description" placeholder="Описание" class="input-field"></textarea>
+      </p>
+      <p>
+        <label for="deadline">Дедлайн:</label>
+        <input id="deadline" v-model="deadline" type="date" class="input-field">
+      </p>
+      <p>
+        <input type="submit" value="Создать" class="btn-create">
+      </p>
+      <p v-if="errors.length">
+        <b>Исправьте ошибки:</b>
+        <ul>
+          <li v-for="error in errors">{{ error }}</li>
+        </ul>
+      </p>
+    </form>
+  `,
+  data() {
+    return {
+      title: '',
+      description: '',
+      deadline: '',
+      errors: []
+    }
+  },
+  methods: {
+    createTask() {
+      this.errors = [];
+      
+      if (this.title && this.description && this.deadline) {
+        let newTask = {
+          title: this.title,
+          description: this.description,
+          deadline: this.deadline,
+          createdAt: this.getCurrentDateTime()
+        };
+        
+        eventBus.$emit('task-created', newTask);
+        
+        this.title = '';
+        this.description = '';
+        this.deadline = '';
+      } else {
+        if (!this.title) this.errors.push("Заголовок обязателен.");
+        if (!this.description) this.errors.push("Описание обязательно.");
+        if (!this.deadline) this.errors.push("Дедлайн обязателен.");
+      }
+    },
+    getCurrentDateTime() {
+      const now = new Date();
+      return now.toLocaleString('ru-RU');
+    }
+  }
+});
+
+// ============================================
+// Компонент task-card
+// ============================================
 Vue.component('task-card', {
   props: {
     task: {
@@ -14,32 +97,50 @@ Vue.component('task-card', {
       isEditing: false,
       editTitle: '',
       editDescription: '',
-      editDeadline: ''
+      editDeadline: '',
+      showReturnForm: false,
+      returnReason: ''
     }
   },
   template: `
-    <div class="task-card">
-      <div v-if="!isEditing">
+    <div class="task-card" :class="getStatusClass()">
+      <div v-if="!isEditing && !showReturnForm">
         <h3>{{ task.title }}</h3>
         <p class="description">{{ task.description }}</p>
         <p class="date">Создано: {{ task.createdAt }}</p>
         <p class="deadline">Дедлайн: {{ task.deadline }}</p>
+        <p v-if="task.completedAt" class="completed-info">
+          Выполнено: {{ task.completedAt }}
+          <span :class="deadlineStatusClass()">
+            ({{ getDeadlineStatus() }})
+          </span>
+        </p>
         <p v-if="task.updatedAt" class="updated">
           Изменено: {{ task.updatedAt }}
         </p>
+        <p v-if="task.returnReason" class="return-info">
+          Возврат: {{ task.returnReason }}
+        </p>
         <div class="card-actions">
-          <button @click="startEdit" class="btn-edit">
-            Редактировать
-          </button>
-          <button 
-            v-if="columnIndex < 3" 
-            @click="$emit('move-task', task.id, columnIndex)" 
-            class="btn-move">
-            {{ getMoveButtonText() }}
-          </button>
+          <button @click="startEdit" class="btn-edit">Редактировать</button>
+          
+          <button v-if="columnIndex === 0" @click="moveForward" class="btn-move">В работу</button>
+          <button v-if="columnIndex === 1" @click="moveForward" class="btn-move">На тестирование</button>
+          <button v-if="columnIndex === 2" @click="moveForward" class="btn-move">Выполнить</button>
+          
+          <button v-if="columnIndex === 2" @click="showReturnForm = true" class="btn-return">Вернуть</button>
+          <button v-if="columnIndex === 0" @click="deleteTask" class="btn-delete">Удалить</button>
         </div>
       </div>
-      <div v-else class="edit-form">
+      
+      <div v-if="showReturnForm" class="return-form">
+        <h4>Причина возврата:</h4>
+        <textarea v-model="returnReason" placeholder="Укажите причину..." rows="3"></textarea>
+        <button @click="returnToWork" class="btn-confirm">Подтвердить</button>
+        <button @click="cancelReturn" class="btn-cancel">Отмена</button>
+      </div>
+      
+      <div v-if="isEditing" class="edit-form">
         <input v-model="editTitle" placeholder="Заголовок">
         <textarea v-model="editDescription" placeholder="Описание"></textarea>
         <input v-model="editDeadline" type="date">
@@ -48,10 +149,27 @@ Vue.component('task-card', {
       </div>
     </div>
   `,
+  computed: {
+    isOverdue() {
+      if (!this.task.completedAt || !this.task.deadline) return false;
+      const deadline = new Date(this.task.deadline + 'T23:59:59');
+      const completed = new Date(this.task.completedAt);
+      if (isNaN(deadline.getTime()) || isNaN(completed.getTime())) return false;
+      return completed > deadline;
+    }
+  },
   methods: {
-    getMoveButtonText() {
-      const texts = ['В работу', 'На тестирование', 'Выполнить'];
-      return texts[this.columnIndex];
+    getStatusClass() {
+      if (this.columnIndex === 3) {
+        return this.isOverdue ? 'overdue' : 'on-time';
+      }
+      return '';
+    },
+    deadlineStatusClass() {
+      return this.isOverdue ? 'status-overdue' : 'status-ontime';
+    },
+    getDeadlineStatus() {
+      return this.isOverdue ? 'Просрочено' : 'В срок';
     },
     startEdit() {
       this.editTitle = this.task.title;
@@ -60,7 +178,7 @@ Vue.component('task-card', {
       this.isEditing = true;
     },
     saveEdit() {
-      this.$emit('update-task', this.task.id, {
+      eventBus.$emit('update-task', this.task.id, {
         title: this.editTitle,
         description: this.editDescription,
         deadline: this.editDeadline,
@@ -71,13 +189,36 @@ Vue.component('task-card', {
     cancelEdit() {
       this.isEditing = false;
     },
+    moveForward() {
+      eventBus.$emit('move-task', this.task.id, this.columnIndex);
+    },
+    returnToWork() {
+      if (this.returnReason.trim()) {
+        eventBus.$emit('return-task', this.task.id, this.returnReason);
+        this.returnReason = '';
+        this.showReturnForm = false;
+      } else {
+        alert('Укажите причину возврата!');
+      }
+    },
+    cancelReturn() {
+      this.showReturnForm = false;
+      this.returnReason = '';
+    },
+    deleteTask() {
+      if (confirm('Удалить эту задачу?')) {
+        eventBus.$emit('delete-task', this.task.id);
+      }
+    },
     getCurrentDateTime() {
-      const now = new Date();
-      return now.toLocaleString('ru-RU');
+      return new Date().toLocaleString('ru-RU');
     }
   }
 });
 
+// ============================================
+// Компонент board-column
+// ============================================
 Vue.component('board-column', {
   props: {
     title: {
@@ -96,25 +237,22 @@ Vue.component('board-column', {
   template: `
     <div class="column">
       <h2>{{ title }}</h2>
-      <create-task-form 
-        v-if="columnIndex === 0"
-        @task-created="$emit('task-created', $event)">
-      </create-task-form>
+      <create-task-form v-if="columnIndex === 0"></create-task-form>
       <div class="tasks-list">
         <task-card 
           v-for="task in tasks" 
           :key="task.id" 
           :task="task"
-          :column-index="columnIndex"
-          @move-task="$emit('move-task', $event, columnIndex)"
-          @update-task="$emit('update-task', $event, columnIndex, $event)">
+          :column-index="columnIndex">
         </task-card>
       </div>
     </div>
   `
 });
 
-
+// ============================================
+// Корневой экземпляр Vue
+// ============================================
 let app = new Vue({
   el: '#app',
   data: {
@@ -130,6 +268,7 @@ let app = new Vue({
     handleTaskCreated(newTask) {
       newTask.id = this.nextTaskId++;
       this.columns[0].push(newTask);
+      this.saveToLocalStorage(); // ✅ Сохраняем после создания
     },
     handleMoveTask(taskId, fromColumn) {
       const taskIndex = this.columns[fromColumn].findIndex(t => t.id === taskId);
@@ -137,68 +276,92 @@ let app = new Vue({
       
       const task = this.columns[fromColumn][taskIndex];
       this.columns[fromColumn].splice(taskIndex, 1);
-      this.columns[fromColumn + 1].push(task);
-    },
-    handleUpdateTask(taskId, fromColumn, updates) {
-      const task = this.columns[fromColumn].find(t => t.id === taskId);
-      if (task) {
-        Object.assign(task, updates);
+      
+      if (fromColumn === 2) {
+        task.completedAt = new Date().toLocaleString('ru-RU');
       }
-    }
-  }
-});
-
-Vue.component('create-task-form', {
-  data() {
-    return {
-      title: '',
-      description: '',
-      deadline: ''
+      
+      this.columns[fromColumn + 1].push(task);
+      this.saveToLocalStorage(); // ✅ Сохраняем после перемещения
+    },
+    handleUpdateTask(taskId, updates) {
+      for (let i = 0; i < this.columns.length; i++) {
+        const task = this.columns[i].find(t => t.id === taskId);
+        if (task) {
+          Object.assign(task, updates);
+          this.saveToLocalStorage(); // ✅ Сохраняем после редактирования
+          break;
+        }
+      }
+    },
+    handleReturnTask(taskId, reason) {
+      const taskIndex = this.columns[2].findIndex(t => t.id === taskId);
+      if (taskIndex === -1) return;
+      
+      const task = this.columns[2][taskIndex];
+      task.returnReason = reason;
+      task.returnedAt = new Date().toLocaleString('ru-RU');
+      
+      this.columns[2].splice(taskIndex, 1);
+      this.columns[1].push(task);
+      this.saveToLocalStorage(); // ✅ Сохраняем после возврата
+    },
+    handleDeleteTask(taskId) {
+      const taskIndex = this.columns[0].findIndex(t => t.id === taskId);
+      if (taskIndex !== -1) {
+        this.columns[0].splice(taskIndex, 1);
+        this.saveToLocalStorage(); // ✅ Сохраняем после удаления
+      }
+    },
+    
+    // ============================================
+    // Метод сохранения в localStorage
+    // ============================================
+    saveToLocalStorage() {
+      localStorage.setItem('kanban_columns', JSON.stringify(this.columns));
+      localStorage.setItem('kanban_nextTaskId', this.nextTaskId);
+    },
+    
+    // ============================================
+    // Метод загрузки из localStorage
+    // ============================================
+    loadFromLocalStorage() {
+      const savedColumns = localStorage.getItem('kanban_columns');
+      const savedNextTaskId = localStorage.getItem('kanban_nextTaskId');
+      
+      if (savedColumns) {
+        this.columns = JSON.parse(savedColumns);
+      }
+      
+      if (savedNextTaskId) {
+        this.nextTaskId = parseInt(savedNextTaskId);
+      }
     }
   },
-  template: `
-    <div class="create-form">
-      <h3>Новая задача</h3>
-      <input 
-        v-model="title" 
-        placeholder="Заголовок" 
-        class="input-field"
-      >
-      <textarea 
-        v-model="description" 
-        placeholder="Описание" 
-        class="input-field"
-      ></textarea>
-      <input 
-        v-model="deadline" 
-        type="date" 
-        class="input-field"
-      >
-      <button @click="createTask" class="btn-create">
-        Создать
-      </button>
-    </div>
-  `,
-  methods: {
-    createTask() {
-      if (this.title && this.description && this.deadline) {
-        const newTask = {
-          title: this.title,
-          description: this.description,
-          deadline: this.deadline,
-          createdAt: this.getCurrentDateTime()
-        };
-        this.$emit('task-created', newTask);
-        this.title = '';
-        this.description = '';
-        this.deadline = '';
-      } else {
-        alert('Заполните все поля!');
-      }
-    },
-    getCurrentDateTime() {
-      const now = new Date();
-      return now.toLocaleString('ru-RU');
-    }
+  // Хук жизненного цикла mounted (пункт 12 пособия)
+  mounted() {
+    // ✅ Загружаем данные при монтировании компонента
+    this.loadFromLocalStorage();
+    
+    // Подписка на события eventBus (пункт 12 пособия)
+    eventBus.$on('task-created', (newTask) => {
+      this.handleTaskCreated(newTask);
+    });
+    
+    eventBus.$on('move-task', (taskId, fromColumn) => {
+      this.handleMoveTask(taskId, fromColumn);
+    });
+    
+    eventBus.$on('update-task', (taskId, updates) => {
+      this.handleUpdateTask(taskId, updates);
+    });
+    
+    eventBus.$on('return-task', (taskId, reason) => {
+      this.handleReturnTask(taskId, reason);
+    });
+    
+    eventBus.$on('delete-task', (taskId) => {
+      this.handleDeleteTask(taskId);
+    });
   }
 });

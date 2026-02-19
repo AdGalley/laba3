@@ -5,26 +5,34 @@
 }
 
 body {
-  font-family: Arial, sans-serif;
-  background-color: #f5f5f5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #101010;
   padding: 20px;
+  color: #e0e0e0;
+  min-height: 100vh;
 }
 
 h1 {
   text-align: center;
   margin-bottom: 30px;
-  color: #333;
+  color: #fff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 32px;
 }
 
 .board {
   display: flex;
   justify-content: space-between;
   gap: 20px;
+  flex-wrap: wrap;
 }
 
+/* Убран эффект матового стекла */
 .column {
   flex: 1;
-  background-color: #e0e0e0;
+  min-width: 280px;
+  background-color: #1e1e1e;
+  border: 1px solid #333;
   border-radius: 8px;
   padding: 15px;
   min-height: 500px;
@@ -33,8 +41,12 @@ h1 {
 .column h2 {
   text-align: center;
   margin-bottom: 15px;
+  color: #fff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-size: 18px;
-  color: #333;
+  padding: 10px;
+  background-color: #2a2a2a;
+  border-radius: 6px;
 }
 
 .tasks-list {
@@ -43,65 +55,151 @@ h1 {
   gap: 10px;
 }
 
+/* Упрощённая карточка задачи */
 .task-card {
-  background-color: white;
+  background-color: #252525;
+  border: 1px solid #333;
   border-radius: 6px;
   padding: 12px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .task-card h3 {
   margin-bottom: 8px;
+  color: #fff;
   font-size: 16px;
-  color: #333;
 }
 
 .task-card .description {
   font-size: 14px;
-  color: #666;
+  color: #b0b0b0;
   margin-bottom: 10px;
+  line-height: 1.4;
 }
 
 .task-card .date,
 .task-card .deadline {
-  font-size: 12px;
-  color: #999;
+  font-size: 11px;
+  color: #888;
   margin-bottom: 4px;
 }
 
-.create-form {
-  background-color: #fff;
+.task-card .deadline {
+  color: #ff9800;
+}
+
+.task-card .completed-info {
+  color: #4caf50;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #333;
+}
+
+.task-card .updated,
+.task-card .return-info {
+  font-size: 11px;
+  color: #666;
+  margin-top: 5px;
+}
+
+/* Статусы карточек */
+.task-card.overdue {
+  border-left: 4px solid #f44336;
+}
+
+.task-card.on-time {
+  border-left: 4px solid #4caf50;
+}
+
+.status-overdue {
+  color: #f44336;
+  font-weight: bold;
+}
+
+.status-ontime {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+/* Кнопки */
+.card-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.card-actions button {
+  flex: 1;
+  padding: 6px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #fff;
+  transition: opacity 0.2s;
+}
+
+.card-actions button:hover {
+  opacity: 0.8;
+}
+
+.btn-edit { background-color: #2196f3; }
+.btn-move { background-color: #ff9800; }
+.btn-return { background-color: #f44336; }
+.btn-delete { background-color: #616161; }
+.btn-save { background-color: #4caf50; }
+.btn-confirm { background-color: #4caf50; }
+.btn-cancel { background-color: #757575; }
+
+/* Формы */
+.create-form,
+.edit-form,
+.return-form {
+  background-color: #1e1e1e;
+  border: 1px solid #333;
   padding: 15px;
   border-radius: 6px;
   margin-bottom: 15px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.create-form h3 {
+.create-form h3,
+.return-form h4 {
+  color: #fff;
   margin-bottom: 10px;
   font-size: 16px;
-  color: #333;
 }
 
 .input-field {
   width: 100%;
   padding: 8px;
   margin-bottom: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid #444;
   border-radius: 4px;
+  background-color: #2a2a2a;
+  color: #fff;
   font-size: 14px;
+}
+
+.input-field::placeholder {
+  color: #888;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #4caf50;
 }
 
 .input-field textarea {
   min-height: 80px;
   resize: vertical;
+  font-family: inherit;
 }
 
 .btn-create {
   width: 100%;
   padding: 10px;
   background-color: #4caf50;
-  color: white;
+  color: #fff;
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -112,70 +210,23 @@ h1 {
   background-color: #45a049;
 }
 
-.card-actions {
-  margin-top: 10px;
-  display: flex;
-  gap: 5px;
+/* Адаптивность */
+@media (max-width: 1200px) {
+  .column {
+    min-width: 250px;
+  }
 }
 
-.card-actions button {
-  flex: 1;
-  padding: 6px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.btn-edit {
-  background-color: #2196f3;
-  color: white;
-}
-
-.btn-edit:hover {
-  background-color: #1976d2;
-}
-
-.btn-move {
-  background-color: #ff9800;
-  color: white;
-}
-
-.btn-move:hover {
-  background-color: #f57c00;
-}
-
-.edit-form input,
-.edit-form textarea {
-  width: 100%;
-  padding: 6px;
-  margin-bottom: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 13px;
-}
-
-.btn-save {
-  background-color: #4caf50;
-  color: white;
-  padding: 6px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-right: 5px;
-}
-
-.btn-cancel {
-  background-color: #f44336;
-  color: white;
-  padding: 6px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.task-card .updated {
-  font-size: 11px;
-  color: #666;
-  font-style: italic;
+@media (max-width: 768px) {
+  .board {
+    flex-direction: column;
+  }
+  
+  .column {
+    min-height: 400px;
+  }
+  
+  h1 {
+    font-size: 26px;
+  }
 }
