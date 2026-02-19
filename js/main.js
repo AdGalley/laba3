@@ -1,4 +1,3 @@
-// Компонент карточки задачи
 Vue.component('task-card', {
   props: {
     task: {
@@ -16,7 +15,6 @@ Vue.component('task-card', {
   `
 });
 
-// Компонент столбца
 Vue.component('board-column', {
   props: {
     title: {
@@ -35,6 +33,10 @@ Vue.component('board-column', {
   template: `
     <div class="column">
       <h2>{{ title }}</h2>
+      <create-task-form 
+        v-if="columnIndex === 0"
+        @task-created="$emit('task-created', $event)">
+      </create-task-form>
       <div class="tasks-list">
         <task-card 
           v-for="task in tasks" 
@@ -46,7 +48,7 @@ Vue.component('board-column', {
   `
 });
 
-// Корневой экземпляр Vue
+
 let app = new Vue({
   el: '#app',
   data: {
@@ -55,6 +57,68 @@ let app = new Vue({
       [], // В работе
       [], // Тестирование
       []  // Выполненные
-    ]
+    ],
+    nextTaskId: 1
+  },
+  methods: {
+    handleTaskCreated(newTask) {
+      newTask.id = this.nextTaskId++;
+      this.columns[0].push(newTask);
+    }
+  }
+});
+
+Vue.component('create-task-form', {
+  data() {
+    return {
+      title: '',
+      description: '',
+      deadline: ''
+    }
+  },
+  template: `
+    <div class="create-form">
+      <h3>Новая задача</h3>
+      <input 
+        v-model="title" 
+        placeholder="Заголовок" 
+        class="input-field"
+      >
+      <textarea 
+        v-model="description" 
+        placeholder="Описание" 
+        class="input-field"
+      ></textarea>
+      <input 
+        v-model="deadline" 
+        type="date" 
+        class="input-field"
+      >
+      <button @click="createTask" class="btn-create">
+        Создать
+      </button>
+    </div>
+  `,
+  methods: {
+    createTask() {
+      if (this.title && this.description && this.deadline) {
+        const newTask = {
+          title: this.title,
+          description: this.description,
+          deadline: this.deadline,
+          createdAt: this.getCurrentDateTime()
+        };
+        this.$emit('task-created', newTask);
+        this.title = '';
+        this.description = '';
+        this.deadline = '';
+      } else {
+        alert('Заполните все поля!');
+      }
+    },
+    getCurrentDateTime() {
+      const now = new Date();
+      return now.toLocaleString('ru-RU');
+    }
   }
 });
