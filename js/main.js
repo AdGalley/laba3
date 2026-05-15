@@ -247,51 +247,19 @@ let app = new Vue({
   el: '#app',
   data: {
     columns: [
-      [], // Запланированные
-      [], // В работе
-      [], // Тестирование
-      []  // Выполненные
+      [],
+      [],
+      [],
+      []
     ],
-    nextTaskId: 1
+    nextTaskId: 1,
+    columnsConfig: [
+      { title: 'Запланированные задачи' },
+      { title: 'Задачи в работе' },
+      { title: 'Тестирование' },
+      { title: 'Выполненные задачи' }
+    ]
   },
-  template: `
-    <div class="app-root">
-      <h1>Kanban Board</h1>
-      
-      <div class="board">
-        <board-column 
-          :title="'Запланированные задачи'" 
-          :tasks="columns[0]" 
-          :column-index="0">
-        </board-column>
-
-        <board-column 
-          :title="'Задачи в работе'" 
-          :tasks="columns[1]" 
-          :column-index="1">
-        </board-column>
-
-        <board-column 
-          :title="'Тестирование'" 
-          :tasks="columns[2]" 
-          :column-index="2">
-        </board-column>
-
-        <board-column 
-          :title="'Выполненные задачи'" 
-          :tasks="columns[3]" 
-          :column-index="3">
-        </board-column>
-      </div>
-      
-      <button 
-        @click="clearCompletedTasks" 
-        class="btn-clear-completed"
-        :disabled="columns[3].length === 0">
-        Очистить выполненные задачи
-      </button>
-    </div>
-  `,
   methods: {
     handleTaskCreated(newTask) {
       newTask.id = this.nextTaskId++;

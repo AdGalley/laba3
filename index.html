@@ -10,6 +10,22 @@
 </head>
 <body>
   <div id="app">
+    <h1>Kanban Board</h1>
+    <div class="board">
+      <board-column 
+        v-for="(config, index) in columnsConfig"
+        :key="config.title"
+        :title="config.title"
+        :tasks="columns[index]"
+        :column-index="index">
+      </board-column>
+    </div>
+    <button 
+      @click="clearCompletedTasks" 
+      class="btn-clear-completed"
+      :disabled="columns[3].length === 0">
+      Очистить выполненные задачи
+    </button>
   </div>
 </body>
 </html>
